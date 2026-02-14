@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>대화는 너무 부담스러워</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+        :root {
+            --primary-color: #4a90e2;
+            --accent-color: #ff6b6b;
+            --text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #222;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- Layout Container --- */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* --- Background --- */
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+            filter: brightness(0.6);
+            transition: transform 0.2s ease-out;
+        }
+
+        /* --- UI Layers --- */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 200;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #title-screen, #game-over-screen, #intro-screen {
+            background: rgba(0, 0, 0, 0.8);
+            pointer-events: auto;
+            text-align: center;
+            color: white;
+            padding: 20px;
+            backdrop-filter: blur(8px);
+        }
+
+        #intro-screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            z-index: 250;
+        }
+
+        #intro-screen h2 {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            word-break: keep-all;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 0 10px var(--primary-color);
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #ddd;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        button {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            color: white;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.1s;
+            pointer-events: auto;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 210;
+        }
+
+        #score-board {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        #lives-container {
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 5px red);
+        }
+
+        /* --- Game Objects --- */
+        #player {
+            position: absolute;
+            bottom: -150px; 
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1000px; 
+            height: 1000px;
+            z-index: 100;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.8));
+        }
+
+        .enemy {
+            position: absolute;
+            bottom: 45%; 
+            left: 50%;
+            width: 300px;
+            height: 300px;
+            transform-origin: bottom center;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom center;
+            z-index: 50;
+            will-change: transform, bottom, opacity;
+        }
+
+        .bubble {
+            position: absolute;
+            background: white;
+            color: #333;
+            padding: 12px 20px;
+            border-radius: 24px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 150;
+            pointer-events: none;
+            border: 3px solid #333;
+            max-width: 70vw;
+            white-space: pre-wrap;
+            text-align: center;
+        }
+
+        .enemy-bubble {
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .player-bubble {
+            top: 200px; 
+            left: 50%;
+            transform: translateX(-50%);
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+            animation: shake 0.3s ease-in-out;
+            font-size: 1.6rem;
+            z-index: 250;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            25% { transform: translateX(-50%) rotate(-3deg); }
+            75% { transform: translateX(-50%) rotate(3deg); }
+        }
+
+        #game-over-screen {
+            display: none;
+        }
+
+        .damage-effect {
+            position: absolute;
+            top:0; left:0; width:100%; height:100%;
+            background: red;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 300;
+            transition: opacity 0.1s;
+        }
+
+        .invincible {
+            animation: blink 0.2s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="background"></div>
+        <div id="world">
+            <div id="player"></div>
+        </div>
+        <div id="damage-overlay" class="damage-effect"></div>
+
+        <div id="hud" class="ui-layer">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div id="score-board">
+                    <span>🏃 회피:</span>
+                    <span id="score-val">0</span>
+                </div>
+                <div id="lives-container">
+                    ❤️❤️❤️
+                </div>
+            </div>
+            <button id="back-btn" style="background: rgba(255,255,255,0.2); border: 1px solid white; padding: 5px 15px; border-radius: 20px; color: white; cursor: pointer; pointer-events: auto;" onclick="Game.resetToTitle()">타이틀로</button>
+        </div>
+
+        <!-- Title Screen -->
+        <div id="title-screen" class="ui-layer">
+            <h1>대화는<br>너무 부담스러워</h1>
+            <div class="subtitle">
+                좌우 스와이프나 방향키를 사용하여<br>
+                다가오는 사람들의 대화 공격을 피하세요!
+            </div>
+            <button onclick="Game.startIntro()">게임 시작</button>
+        </div>
+
+        <!-- Intro Screen -->
+        <div id="intro-screen" class="ui-layer">
+            <h2>"나는 극 I이기 때문에 대화가 너무 불편하다!<br>오늘도 사람들을 열심히 피해다녀야지!"</h2>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="ui-layer">
+            <h1 style="color: #ff6b6b;">결국 붙잡혔다!</h1>
+            <div class="subtitle">
+                기를 다 빨렸습니다...<br>
+                결국 1시간 동안 원치 않는 스몰토크를 했습니다.
+            </div>
+            <div class="subtitle">
+                회피 기록: <span id="final-score" style="color:yellow; font-weight:bold;">0</span>회
+            </div>
+            <button onclick="Game.restart()">다시 도망가기</button>
+        </div>
+    </div>
+
+    <script>
+        const toRaw = (url) => url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+
+        const ASSETS = {
+            run: toRaw('https://github.com/caxs23/90run/blob/main/run.gif'),
+            dodgeLeft: [
+                toRaw('https://github.com/caxs23/90run/blob/main/left%20(1).png'),
+                toRaw('https://github.com/caxs23/90run/blob/main/left%20(2).png'),
+                toRaw('https://github.com/caxs23/90run/blob/main/left%20(3).png'),
+                toRaw('https://github.com/caxs23/90run/blob/main/left%20(4).png')
+            ],
+            dodgeRight: [
+                toRaw('https://github.com/caxs23/90run/blob/main/right%20(1).png'),
+                toRaw('https://github.com/caxs23/90run/blob/main/right%20(2).png'),
+                toRaw('https://github.com/caxs23/90run/blob/main/right%20(3).png')
+            ],
+            npc: {
+                ceo: [toRaw('https://github.com/caxs23/90run/blob/main/ceo.png')],
+                prof: [
+                    toRaw('https://github.com/caxs23/90run/blob/main/prof%20(2).png'),
+                    toRaw('https://github.com/caxs23/90run/blob/main/prof%20(3).png'),
+                    toRaw('https://github.com/caxs23/90run/blob/main/prof%20(4).png'),
+                    toRaw('https://github.com/caxs23/90run/blob/main/prof%20(5).png')
+                ],
+                patient: [
+                    toRaw('https://github.com/caxs23/90run/blob/main/patient%20(1).png'),
+                    toRaw('https://github.com/caxs23/90run/blob/main/patient%20(2).png'),
+                    toRaw('https://github.com/caxs23/90run/blob/main/patient%20(3).png'),
+                    toRaw('https://github.com/caxs23/90run/blob/main/patient%20(4).png')
+                ],
+                worker: [toRaw('https://github.com/caxs23/90run/blob/main/worker.png')]
+            },
+            bg: [
+                toRaw('https://github.com/caxs23/90run/blob/main/hospital%20(1).jpg'),
+                toRaw('https://github.com/caxs23/90run/blob/main/hospital%20(2).jpg'),
+                toRaw('https://github.com/caxs23/90run/blob/main/hospital%20(3).jpg')
+            ]
+        };
+
+        const DIALOGUES = {
+            patient: ["선생님 저 집에 가고 싶어요.", "심심해요. 놀아줘요.", "안아줘요.", "여긴 왜 담배를 못 펴요?", "배아픈데 변이 안 나와요."],
+            prof: ["병동은 요즘 어떤가요? 허허.", "새로운 환자를 보내려고 하는데요.", "병동 의견은 어떻습니까?", "수고가 많으시네요.", "회진하다가 한명 빼먹어서 다시 왔습니다.", "면담은 면담실에서 하겠습니다."],
+            ceo: ["다들 수고가 많습니다.", "이곳이 보호병동이군요.", "여기가 90병동입니까?"],
+            worker: ["아-하.", "참치 먹으러 갑시다!", "쭈꾸미 먹으러 갑시다!", "이번에 현대바이오가.."]
+        };
+
+        const PLAYER_HURT_DIALOGUES = ["으악 싫어요!", "앗! 부담스러워!", "안돼! 대화당했어!", "살려주세요!", "말 걸지 마세요!"];
+
+        const Game = {
+            state: 'title',
+            score: 0,
+            lives: 3,
+            lastFrameTime: 0,
+            spawnTimer: 0,
+            spawnInterval: 4500,
+            enemies: [],
+            player: {
+                el: null,
+                isDodging: false,
+                dodgeDirection: null,
+                dodgeTimer: null,
+                invincible: false
+            },
+            worldEl: null,
+            touchStartX: 0,
+
+            init() {
+                this.worldEl = document.getElementById('world');
+                this.player.el = document.getElementById('player');
+                this.updatePlayerImage(ASSETS.run);
+                
+                document.addEventListener('touchstart', (e) => { this.touchStartX = e.touches[0].clientX; });
+                document.addEventListener('touchend', (e) => {
+                    if (this.state !== 'playing') return;
+                    const diffX = e.changedTouches[0].clientX - this.touchStartX;
+                    if (Math.abs(diffX) > 40) this.dodge(diffX < 0 ? 'left' : 'right');
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (this.state !== 'playing') return;
+                    if (e.key === 'ArrowLeft') this.dodge('left');
+                    else if (e.key === 'ArrowRight') this.dodge('right');
+                });
+
+                this.setRandomBackground();
+            },
+
+            setRandomBackground() {
+                const bgEl = document.getElementById('background');
+                const rand = Math.floor(Math.random() * ASSETS.bg.length);
+                bgEl.style.backgroundImage = `url('${ASSETS.bg[rand]}')`;
+            },
+
+            updatePlayerImage(src) {
+                this.player.el.style.backgroundImage = `url('${src}')`;
+            },
+
+            startIntro() {
+                const titleScreen = document.getElementById('title-screen');
+                const introScreen = document.getElementById('intro-screen');
+                
+                titleScreen.style.display = 'none';
+                introScreen.style.display = 'flex';
+                
+                // Fade In
+                setTimeout(() => { introScreen.style.opacity = 1; }, 50);
+                
+                // Wait and Fade Out
+                setTimeout(() => {
+                    introScreen.style.opacity = 0;
+                    setTimeout(() => {
+                        introScreen.style.display = 'none';
+                        this.startGame();
+                    }, 1000);
+                }, 3000); // 3초간 인트로 유지
+            },
+
+            startGame() {
+                this.state = 'playing';
+                this.score = 0;
+                this.lives = 3;
+                this.enemies = [];
+                this.spawnInterval = 4000 + Math.random() * 1000;
+                
+                this.updateScoreUI();
+                this.updateLivesUI();
+                this.setRandomBackground();
+                
+                document.getElementById('hud').style.display = 'flex';
+                document.getElementById('game-over-screen').style.display = 'none';
+                this.worldEl.innerHTML = '<div id="player"></div>';
+                this.player.el = document.getElementById('player');
+                this.updatePlayerImage(ASSETS.run);
+                this.player.isDodging = false;
+                this.setInvincible(false);
+                
+                this.lastFrameTime = performance.now();
+                requestAnimationFrame((time) => this.gameLoop(time));
+            },
+
+            resetToTitle() {
+                this.state = 'title';
+                document.getElementById('hud').style.display = 'none';
+                document.getElementById('game-over-screen').style.display = 'none';
+                document.getElementById('intro-screen').style.display = 'none';
+                document.getElementById('title-screen').style.display = 'flex';
+                this.enemies.forEach(e => e.el.remove());
+                this.enemies = [];
+            },
+
+            restart() {
+                this.startGame();
+            },
+
+            gameOver() {
+                this.state = 'gameover';
+                document.getElementById('hud').style.display = 'none';
+                document.getElementById('final-score').innerText = this.score;
+                document.getElementById('game-over-screen').style.display = 'flex';
+            },
+
+            gameLoop(timestamp) {
+                if (this.state !== 'playing') return;
+                const deltaTime = timestamp - this.lastFrameTime;
+                this.lastFrameTime = timestamp;
+
+                this.spawnTimer += deltaTime;
+                if (this.spawnTimer > this.spawnInterval) {
+                    this.spawnEnemy();
+                    this.spawnTimer = 0;
+                    this.spawnInterval = Math.max(3500, (4000 + Math.random() * 1000) - (this.score * 50));
+                }
+
+                this.updateEnemies(deltaTime);
+                requestAnimationFrame((time) => this.gameLoop(time));
+            },
+
+            spawnEnemy() {
+                const types = Object.keys(ASSETS.npc);
+                const type = types[Math.floor(Math.random() * types.length)];
+                const imgUrl = ASSETS.npc[type][Math.floor(Math.random() * ASSETS.npc[type].length)];
+                const side = Math.random() < 0.5 ? 'left' : 'right'; 
+
+                const enemyEl = document.createElement('div');
+                enemyEl.className = 'enemy';
+                enemyEl.style.backgroundImage = `url('${imgUrl}')`;
+                this.worldEl.appendChild(enemyEl);
+
+                const enemy = {
+                    el: enemyEl,
+                    type: type,
+                    side: side, 
+                    progress: 0, 
+                    duration: 5000,
+                    hasSpoken: false,
+                    spawnTime: performance.now(),
+                    collisionStarted: 0
+                };
+                this.enemies.push(enemy);
+            },
+
+            updateEnemies(dt) {
+                const now = performance.now();
+                const enemiesToRemove = [];
+
+                this.enemies.forEach(enemy => {
+                    enemy.progress += dt / enemy.duration;
+
+                    const currentY = 45 - (enemy.progress * 80); 
+                    
+                    // 적의 크기를 전체적으로 1.3배 상향 (0.65 ~ 3.25)
+                    const currentScale = 0.65 + (Math.pow(enemy.progress, 2) * 2.6); 
+
+                    // 적이 좌우로 조금 덜 사라지게 수정 (60 -> 45)
+                    const maxOffset = 45; 
+                    const directionMultiplier = enemy.side === 'left' ? -1 : 1;
+                    const xOffset = (enemy.progress * maxOffset) * directionMultiplier;
+
+                    enemy.el.style.bottom = `${currentY}%`;
+                    enemy.el.style.transform = `translate(calc(-50% + ${xOffset}vw), 0) scale(${currentScale})`;
+                    enemy.el.style.zIndex = Math.floor(enemy.progress * 150);
+
+                    if (!enemy.hasSpoken && enemy.progress > 0.2) {
+                        this.showDialogue(enemy);
+                        enemy.hasSpoken = true;
+                    }
+
+                    const timeSinceSpawn = now - enemy.spawnTime;
+                    if (timeSinceSpawn > 2000 && enemy.progress < 1.0) {
+                        const isSafe = this.player.isDodging && this.player.dodgeDirection !== enemy.side;
+                        
+                        if (!isSafe && !this.player.invincible) {
+                            if (!enemy.collisionStarted) {
+                                enemy.collisionStarted = now;
+                            }
+                            if (now - enemy.collisionStarted > 1000) {
+                                this.handleCollision();
+                                enemy.collisionStarted = now; 
+                            }
+                        } else {
+                            enemy.collisionStarted = 0; 
+                        }
+                    }
+
+                    if (enemy.progress >= 1.1) {
+                        enemiesToRemove.push(enemy);
+                        if(this.state === 'playing') {
+                            this.score++;
+                            this.updateScoreUI();
+                        }
+                    }
+                });
+
+                enemiesToRemove.forEach(enemy => {
+                    if (enemy.el && enemy.el.parentNode) enemy.el.parentNode.removeChild(enemy.el);
+                    const idx = this.enemies.indexOf(enemy);
+                    if (idx > -1) this.enemies.splice(idx, 1);
+                });
+            },
+
+            showDialogue(enemy) {
+                const text = DIALOGUES[enemy.type][Math.floor(Math.random() * DIALOGUES[enemy.type].length)];
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble enemy-bubble';
+                bubble.innerText = text;
+                enemy.el.appendChild(bubble);
+                
+                setTimeout(() => bubble.style.opacity = 1, 50);
+                
+                setTimeout(() => {
+                    bubble.style.opacity = 0;
+                    setTimeout(() => bubble.remove(), 300);
+                }, 3000);
+            },
+
+            handleCollision() {
+                this.lives--;
+                this.updateLivesUI();
+                this.triggerDamageEffect();
+                this.showPlayerHurtDialogue();
+                this.setInvincible(true);
+
+                if (this.lives <= 0) {
+                    setTimeout(() => this.gameOver(), 800);
+                } else {
+                    // 무적 시간을 3초로 상향 (기존 2000 -> 3000)
+                    setTimeout(() => this.setInvincible(false), 3000); 
+                }
+            },
+
+            showPlayerHurtDialogue() {
+                const old = this.player.el.querySelector('.player-bubble');
+                if (old) old.remove();
+
+                const text = PLAYER_HURT_DIALOGUES[Math.floor(Math.random() * PLAYER_HURT_DIALOGUES.length)];
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble player-bubble';
+                bubble.innerText = text;
+                this.player.el.appendChild(bubble);
+
+                setTimeout(() => bubble.style.opacity = 1, 10);
+                setTimeout(() => {
+                    bubble.style.opacity = 0;
+                    setTimeout(() => bubble.remove(), 300);
+                }, 1500);
+            },
+
+            triggerDamageEffect() {
+                const overlay = document.getElementById('damage-overlay');
+                overlay.style.opacity = 0.7;
+                setTimeout(() => overlay.style.opacity = 0, 150);
+            },
+
+            setInvincible(state) {
+                this.player.invincible = state;
+                if (state) this.player.el.classList.add('invincible');
+                else this.player.el.classList.remove('invincible');
+            },
+
+            updateScoreUI() { document.getElementById('score-val').innerText = this.score; },
+            updateLivesUI() {
+                let hearts = '';
+                for(let i=0; i<this.lives; i++) hearts += '❤️';
+                document.getElementById('lives-container').innerText = hearts;
+            },
+
+            dodge(direction) {
+                if (this.player.isDodging && this.player.dodgeDirection === direction) return;
+                
+                this.player.isDodging = true;
+                this.player.dodgeDirection = direction;
+                
+                const imgList = direction === 'left' ? ASSETS.dodgeLeft : ASSETS.dodgeRight;
+                this.updatePlayerImage(imgList[Math.floor(Math.random() * imgList.length)]);
+
+                const moveAmount = direction === 'left' ? -12 : 12; 
+                this.player.el.style.transform = `translateX(calc(-50% + ${moveAmount}vw))`;
+
+                if (this.player.dodgeTimer) clearTimeout(this.player.dodgeTimer);
+                this.player.dodgeTimer = setTimeout(() => {
+                    this.player.isDodging = false;
+                    this.player.dodgeDirection = null;
+                    this.updatePlayerImage(ASSETS.run);
+                    this.player.el.style.transform = `translateX(-50%)`;
+                }, 700);
+            }
+        };
+
+        window.onload = () => Game.init();
+    </script>
+</body>
+</html>
