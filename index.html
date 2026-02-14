@@ -153,14 +153,18 @@
             filter: drop-shadow(0 0 5px red);
         }
 
+        #back-btn-container {
+            margin-top: -10px; /* 버튼을 한 칸 위로 올림 */
+        }
+
         /* --- Game Objects --- */
         #player {
             position: absolute;
             bottom: -150px; 
             left: 50%;
             transform: translateX(-50%);
-            width: 1000px; 
-            height: 1000px;
+            width: 600px; /* 1000px에서 600px로 축소 */
+            height: 600px;
             z-index: 100;
             background-size: contain;
             background-repeat: no-repeat;
@@ -209,7 +213,7 @@
         }
 
         .player-bubble {
-            top: 200px; 
+            top: 150px; /* 플레이어 크기 축소에 따른 말풍선 위치 조정 */
             left: 50%;
             transform: translateX(-50%);
             border-color: #ff6b6b;
@@ -239,7 +243,6 @@
             transition: opacity 0.1s;
         }
 
-        /* 피격 시 깜빡임 효과 */
         .invincible {
             animation: blink 0.2s infinite;
         }
@@ -271,7 +274,9 @@
                     ❤️❤️❤️
                 </div>
             </div>
-            <button id="back-btn" style="background: rgba(255,255,255,0.2); border: 1px solid white; padding: 5px 15px; border-radius: 20px; color: white; cursor: pointer; pointer-events: auto;" onclick="Game.resetToTitle()">타이틀로</button>
+            <div id="back-btn-container">
+                <button id="back-btn" style="background: rgba(255,255,255,0.2); border: 1px solid white; padding: 5px 15px; border-radius: 20px; color: white; cursor: pointer; pointer-events: auto;" onclick="Game.resetToTitle()">타이틀로</button>
+            </div>
         </div>
 
         <!-- Title Screen -->
@@ -364,7 +369,7 @@
                 isDodging: false,
                 dodgeDirection: null,
                 dodgeTimer: null,
-                invincible: false, // 충돌 판정용 무적 상태
+                invincible: false,
                 invincibleTimer: null
             },
             worldEl: null,
@@ -436,7 +441,7 @@
                 this.player.el = document.getElementById('player');
                 this.updatePlayerImage(ASSETS.run);
                 this.player.isDodging = false;
-                this.setInvincible(false, 0, false); // 초기화
+                this.setInvincible(false, 0, false);
                 
                 this.lastFrameTime = performance.now();
                 requestAnimationFrame((time) => this.gameLoop(time));
@@ -511,8 +516,10 @@
                     enemy.progress += dt / enemy.duration;
 
                     const currentY = 45 - (enemy.progress * 80); 
-                    const currentScale = 0.8 + (Math.pow(enemy.progress, 2) * 2.6); 
-                    const maxOffset = 45; 
+                    // 적 크기 배율을 1배 수준으로 복구 (0.5 ~ 2.5 사이의 자연스러운 증가)
+                    const currentScale = 0.5 + (Math.pow(enemy.progress, 2) * 2.0); 
+                    // maxOffset 다시 60으로 변경
+                    const maxOffset = 60; 
                     const directionMultiplier = enemy.side === 'left' ? -1 : 1;
                     const xOffset = (enemy.progress * maxOffset) * directionMultiplier;
 
@@ -527,7 +534,6 @@
 
                     const timeSinceSpawn = now - enemy.spawnTime;
                     if (timeSinceSpawn > 2000 && enemy.progress < 1.0) {
-                        // 회피 중이거나 무적 상태일 때 안전
                         const isSafe = (this.player.isDodging && this.player.dodgeDirection !== enemy.side) || this.player.invincible;
                         
                         if (!isSafe) {
@@ -579,7 +585,6 @@
                 this.updateLivesUI();
                 this.triggerDamageEffect();
                 this.showPlayerHurtDialogue();
-                // 데미지 입었을 때는 시각적으로 티가 나야 하므로 깜빡임(visualEffect)을 true로 설정
                 this.setInvincible(true, 2000, true); 
 
                 if (this.lives <= 0) {
@@ -610,12 +615,6 @@
                 setTimeout(() => overlay.style.opacity = 0, 150);
             },
 
-            /**
-             * 무적 상태 설정 함수
-             * @param {boolean} state - 무적 여부
-             * @param {number} duration - 지속 시간 (ms)
-             * @param {boolean} visualEffect - 깜빡임 애니메이션 표시 여부
-             */
             setInvincible(state, duration = 0, visualEffect = true) {
                 if (this.player.invincibleTimer) clearTimeout(this.player.invincibleTimer);
                 
@@ -651,13 +650,12 @@
                 this.player.isDodging = true;
                 this.player.dodgeDirection = direction;
                 
-                // 회피 시작 시 5초 동안 무적 상태로 설정 (시각적 깜빡임 없음)
                 this.setInvincible(true, 5000, false);
 
                 const imgList = direction === 'left' ? ASSETS.dodgeLeft : ASSETS.dodgeRight;
                 this.updatePlayerImage(imgList[Math.floor(Math.random() * imgList.length)]);
 
-                const moveAmount = direction === 'left' ? -12 : 12; 
+                const moveAmount = direction === 'left' ? -15 : 15; 
                 this.player.el.style.transform = `translateX(calc(-50% + ${moveAmount}vw))`;
 
                 if (this.player.dodgeTimer) clearTimeout(this.player.dodgeTimer);
