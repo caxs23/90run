@@ -239,6 +239,7 @@
             transition: opacity 0.1s;
         }
 
+        /* 피격 시 깜빡임 효과 */
         .invincible {
             animation: blink 0.2s infinite;
         }
@@ -344,7 +345,7 @@
         const DIALOGUES = {
             patient: ["선생님 저 집에 가고 싶어요.", "심심해요. 놀아줘요.", "안아줘요.", "여긴 왜 담배를 못 펴요?", "배아픈데 변이 안 나와요."],
             prof: ["병동은 요즘 어떤가요? 허허.", "새로운 환자를 보내려고 하는데요.", "병동 의견은 어떻습니까?", "수고가 많으시네요.", "회진하다가 한명 빼먹어서 다시 왔습니다.", "면담은 면담실에서 하겠습니다."],
-            ceo: ["다들 수고가 많습니다.", "이곳이 보호병동이군요.", "여기가 90병동입니까?"],
+            ceo: ["다들 수고가 많습니다.", "이곳이 보호병동군요.", "여기가 90병동입니까?"],
             worker: ["아-하.", "참치 먹으러 갑시다!", "쭈꾸미 먹으러 갑시다!", "이번에 현대바이오가.."]
         };
 
@@ -363,7 +364,8 @@
                 isDodging: false,
                 dodgeDirection: null,
                 dodgeTimer: null,
-                invincible: false
+                invincible: false, // 충돌 판정용 무적 상태
+                invincibleTimer: null
             },
             worldEl: null,
             touchStartX: 0,
@@ -406,17 +408,15 @@
                 titleScreen.style.display = 'none';
                 introScreen.style.display = 'flex';
                 
-                // Fade In
                 setTimeout(() => { introScreen.style.opacity = 1; }, 50);
                 
-                // Wait and Fade Out
                 setTimeout(() => {
                     introScreen.style.opacity = 0;
                     setTimeout(() => {
                         introScreen.style.display = 'none';
                         this.startGame();
                     }, 1000);
-                }, 3000); // 3초간 인트로 유지
+                }, 3000);
             },
 
             startGame() {
@@ -424,7 +424,7 @@
                 this.score = 0;
                 this.lives = 3;
                 this.enemies = [];
-                this.spawnInterval = 4000 + Math.random() * 1000;
+                this.spawnInterval = 5000 + Math.random() * 1000;
                 
                 this.updateScoreUI();
                 this.updateLivesUI();
@@ -436,7 +436,7 @@
                 this.player.el = document.getElementById('player');
                 this.updatePlayerImage(ASSETS.run);
                 this.player.isDodging = false;
-                this.setInvincible(false);
+                this.setInvincible(false, 0, false); // 초기화
                 
                 this.lastFrameTime = performance.now();
                 requestAnimationFrame((time) => this.gameLoop(time));
@@ -511,11 +511,7 @@
                     enemy.progress += dt / enemy.duration;
 
                     const currentY = 45 - (enemy.progress * 80); 
-                    
-                    // 적의 크기를 전체적으로 1.3배 상향 (0.65 ~ 3.25)
-                    const currentScale = 0.65 + (Math.pow(enemy.progress, 2) * 2.6); 
-
-                    // 적이 좌우로 조금 덜 사라지게 수정 (60 -> 45)
+                    const currentScale = 0.8 + (Math.pow(enemy.progress, 2) * 2.6); 
                     const maxOffset = 45; 
                     const directionMultiplier = enemy.side === 'left' ? -1 : 1;
                     const xOffset = (enemy.progress * maxOffset) * directionMultiplier;
@@ -531,9 +527,10 @@
 
                     const timeSinceSpawn = now - enemy.spawnTime;
                     if (timeSinceSpawn > 2000 && enemy.progress < 1.0) {
-                        const isSafe = this.player.isDodging && this.player.dodgeDirection !== enemy.side;
+                        // 회피 중이거나 무적 상태일 때 안전
+                        const isSafe = (this.player.isDodging && this.player.dodgeDirection !== enemy.side) || this.player.invincible;
                         
-                        if (!isSafe && !this.player.invincible) {
+                        if (!isSafe) {
                             if (!enemy.collisionStarted) {
                                 enemy.collisionStarted = now;
                             }
@@ -582,13 +579,11 @@
                 this.updateLivesUI();
                 this.triggerDamageEffect();
                 this.showPlayerHurtDialogue();
-                this.setInvincible(true);
+                // 데미지 입었을 때는 시각적으로 티가 나야 하므로 깜빡임(visualEffect)을 true로 설정
+                this.setInvincible(true, 2000, true); 
 
                 if (this.lives <= 0) {
                     setTimeout(() => this.gameOver(), 800);
-                } else {
-                    // 무적 시간을 3초로 상향 (기존 2000 -> 3000)
-                    setTimeout(() => this.setInvincible(false), 3000); 
                 }
             },
 
@@ -615,10 +610,32 @@
                 setTimeout(() => overlay.style.opacity = 0, 150);
             },
 
-            setInvincible(state) {
+            /**
+             * 무적 상태 설정 함수
+             * @param {boolean} state - 무적 여부
+             * @param {number} duration - 지속 시간 (ms)
+             * @param {boolean} visualEffect - 깜빡임 애니메이션 표시 여부
+             */
+            setInvincible(state, duration = 0, visualEffect = true) {
+                if (this.player.invincibleTimer) clearTimeout(this.player.invincibleTimer);
+                
                 this.player.invincible = state;
-                if (state) this.player.el.classList.add('invincible');
-                else this.player.el.classList.remove('invincible');
+                if (state) {
+                    if (visualEffect) {
+                        this.player.el.classList.add('invincible');
+                    } else {
+                        this.player.el.classList.remove('invincible');
+                    }
+                    
+                    if (duration > 0) {
+                        this.player.invincibleTimer = setTimeout(() => {
+                            this.player.invincible = false;
+                            this.player.el.classList.remove('invincible');
+                        }, duration);
+                    }
+                } else {
+                    this.player.el.classList.remove('invincible');
+                }
             },
 
             updateScoreUI() { document.getElementById('score-val').innerText = this.score; },
@@ -634,6 +651,9 @@
                 this.player.isDodging = true;
                 this.player.dodgeDirection = direction;
                 
+                // 회피 시작 시 5초 동안 무적 상태로 설정 (시각적 깜빡임 없음)
+                this.setInvincible(true, 5000, false);
+
                 const imgList = direction === 'left' ? ASSETS.dodgeLeft : ASSETS.dodgeRight;
                 this.updatePlayerImage(imgList[Math.floor(Math.random() * imgList.length)]);
 
