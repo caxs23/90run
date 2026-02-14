@@ -80,37 +80,38 @@
         }
 
         #intro-screen h2 {
-            font-size: 1.5rem;
-            line-height: 1.8;
+            font-size: 1rem; /* 1.5rem에서 1rem으로 축소 */
+            line-height: 1.6;
             word-break: keep-all;
             padding: 0 20px;
+            font-weight: 400;
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 1.8rem; /* 2.5rem의 약 2/3 */
             font-weight: 900;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: #fff;
             text-shadow: 0 0 10px var(--primary-color);
             line-height: 1.2;
         }
 
         .subtitle {
-            font-size: 1rem;
+            font-size: 0.7rem; /* 1rem의 약 2/3 */
             color: #ddd;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             line-height: 1.5;
         }
 
         button {
             background: linear-gradient(135deg, #6e8efb, #a777e3);
             border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
+            padding: 10px 25px; /* 크기 축소 */
+            font-size: 0.8rem; /* 1.2rem의 약 2/3 */
             color: white;
-            border-radius: 50px;
+            border-radius: 30px;
             font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
             cursor: pointer;
             transition: transform 0.1s;
             pointer-events: auto;
@@ -130,40 +131,40 @@
             display: none;
             justify-content: space-between;
             align-items: flex-start;
-            padding: 20px;
+            padding: 15px;
             box-sizing: border-box;
             z-index: 210;
         }
 
         #score-board {
             color: white;
-            font-size: 1.2rem;
+            font-size: 0.8rem; /* 1.2rem의 약 2/3 */
             font-weight: bold;
             background: rgba(0,0,0,0.6);
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 6px 12px;
+            border-radius: 15px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             backdrop-filter: blur(5px);
         }
 
         #lives-container {
-            font-size: 1.8rem;
-            filter: drop-shadow(0 0 5px red);
+            font-size: 1.2rem; /* 1.8rem의 약 2/3 */
+            filter: drop-shadow(0 0 3px red);
         }
 
         #back-btn-container {
-            margin-top: -10px; /* 버튼을 한 칸 위로 올림 */
+            margin-top: -5px;
         }
 
         /* --- Game Objects --- */
         #player {
             position: absolute;
-            bottom: -150px; 
+            bottom: -100px; 
             left: 50%;
             transform: translateX(-50%);
-            width: 600px; /* 1000px에서 600px로 축소 */
+            width: 600px; 
             height: 600px;
             z-index: 100;
             background-size: contain;
@@ -191,35 +192,35 @@
             position: absolute;
             background: white;
             color: #333;
-            padding: 12px 20px;
-            border-radius: 24px;
-            font-size: 1.2rem;
+            padding: 8px 14px; /* 크기 축소 */
+            border-radius: 16px;
+            font-size: 0.8rem; /* 1.2rem의 약 2/3 */
             font-weight: bold;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
             opacity: 0;
             transition: opacity 0.3s ease;
             z-index: 150;
             pointer-events: none;
-            border: 3px solid #333;
-            max-width: 70vw;
+            border: 2px solid #333;
+            max-width: 60vw;
             white-space: pre-wrap;
             text-align: center;
         }
 
         .enemy-bubble {
-            top: -100px;
+            top: -70px; /* 위치 조정 */
             left: 50%;
             transform: translateX(-50%);
         }
 
         .player-bubble {
-            top: 150px; /* 플레이어 크기 축소에 따른 말풍선 위치 조정 */
+            top: 180px; 
             left: 50%;
             transform: translateX(-50%);
             border-color: #ff6b6b;
             color: #ff6b6b;
             animation: shake 0.3s ease-in-out;
-            font-size: 1.6rem;
+            font-size: 1rem; /* 1.6rem의 약 2/3 */
             z-index: 250;
         }
 
@@ -265,7 +266,7 @@
         <div id="damage-overlay" class="damage-effect"></div>
 
         <div id="hud" class="ui-layer">
-            <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div id="score-board">
                     <span>🏃 회피:</span>
                     <span id="score-val">0</span>
@@ -275,7 +276,7 @@
                 </div>
             </div>
             <div id="back-btn-container">
-                <button id="back-btn" style="background: rgba(255,255,255,0.2); border: 1px solid white; padding: 5px 15px; border-radius: 20px; color: white; cursor: pointer; pointer-events: auto;" onclick="Game.resetToTitle()">타이틀로</button>
+                <button id="back-btn" style="background: rgba(255,255,255,0.2); border: 1px solid white; padding: 4px 12px; border-radius: 15px; color: white; cursor: pointer; pointer-events: auto; font-size: 0.7rem;" onclick="Game.resetToTitle()">타이틀로</button>
             </div>
         </div>
 
@@ -296,7 +297,7 @@
 
         <!-- Game Over Screen -->
         <div id="game-over-screen" class="ui-layer">
-            <h1 style="color: #ff6b6b;">결국 붙잡혔다!</h1>
+            <h1 style="color: #ff6b6b; font-size: 1.8rem;">결국 붙잡혔다!</h1>
             <div class="subtitle">
                 기를 다 빨렸습니다...<br>
                 결국 1시간 동안 원치 않는 스몰토크를 했습니다.
@@ -516,9 +517,7 @@
                     enemy.progress += dt / enemy.duration;
 
                     const currentY = 45 - (enemy.progress * 80); 
-                    // 적 크기 배율을 1배 수준으로 복구 (0.5 ~ 2.5 사이의 자연스러운 증가)
                     const currentScale = 0.5 + (Math.pow(enemy.progress, 2) * 2.0); 
-                    // maxOffset 다시 60으로 변경
                     const maxOffset = 60; 
                     const directionMultiplier = enemy.side === 'left' ? -1 : 1;
                     const xOffset = (enemy.progress * maxOffset) * directionMultiplier;
